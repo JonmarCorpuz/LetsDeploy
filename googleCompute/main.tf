@@ -96,7 +96,7 @@ resource "google_compute_instance_template" "mig-template" {
     boot         = true
   }
 
-  metadata_startup_script = file("./StartupScript.sh")
+  metadata_startup_script = file("./startupScript.sh")
 
   lifecycle {
     create_before_destroy = true
