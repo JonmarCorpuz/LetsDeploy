@@ -1,3 +1,5 @@
+# ==== PROVIDERS ==========================================================
+
 terraform {
 
   required_version = ">= 1.3"
@@ -14,23 +16,23 @@ terraform {
 }
 
 provider "google" {
-  project     = var.project_id
-  region      = var.project_region
+  project     = "kubernetes-444901"
+  region      = "us-central1"
   credentials = "keys.json"
 }
 
 provider "google-beta" {
-  project     = var.project_id
-  region      = var.project_region
+  project     = "kubernetes-444901"
+  region      = "us-central1"
   credentials = "keys.json"
 #  alias       = "google-beta"
 }
 
-################################## FIREWALL POLICIES ###################################
+# ==== FIREWALL POLICIES ==================================================
 
 # Allow Health Check Traffic
 resource "google_compute_firewall" "allow_health_check" {
-  name          = "${var.project_id}-lb-fw-allow-hc"
+  name          = "kubernetes-444901-lb-fw-allow-health-check"
   direction     = "INGRESS"
   network       = google_compute_network.vpc-network.id
   source_ranges = ["35.191.0.0/16", "130.211.0.0/22"]
@@ -45,19 +47,36 @@ resource "google_compute_firewall" "allow_health_check" {
 
 }
 
-###################################### NETWORKING ######################################
+# Allow all traffic
+resource "google_compute_firewall" "allow-all" {
+  name          = "kubernetes-444901-allow-all-test"
+  direction     = "INGRESS"
+  network       = google_compute_network.vpc-network.id
+  source_ranges = ["0.0.0.0"]
+  allow {
+    protocol = "tcp"
+  }
+  target_tags = ["allow-all"]
+
+  depends_on = [
+    google_compute_network.vpc-network
+  ]
+
+}
+
+# ==== NETWORKING =========================================================
 
 # Virtual Private Cloud 
 resource "google_compute_network" "vpc-network" {
-  project                 = var.project_id
-  name                    = "${var.project_id}-vpc"
+  project                 = "kubernetes-444901"
+  name                    = "kubernetes-444901-vpc"
   auto_create_subnetworks = false
 }
 
 # Backend Subnet
 resource "google_compute_subnetwork" "vpc-private-subnet" {
-  project       = var.project_id
-  name          = "${var.project_id}-private-subnet"
+  project       = "kubernetes-444901"
+  name          = "kubernetes-444901-private-subnet"
   ip_cidr_range = "10.10.0.0/24"
   region        = var.project_region
   network       = google_compute_network.vpc-network.id
@@ -65,26 +84,26 @@ resource "google_compute_subnetwork" "vpc-private-subnet" {
 
 # Proxy Subnet
 resource "google_compute_subnetwork" "vpc-proxy-subnet" {
-  name          = "${var.project_id}-lb-proxy-subnet"
+  name          = "kubernetes-444901-lb-proxy-subnet"
   ip_cidr_range = "10.10.1.0/24"
-  region        = var.project_region
+  region        = "us-central1"
   purpose       = "REGIONAL_MANAGED_PROXY"
   role          = "ACTIVE"
   network       = google_compute_network.vpc-network.id
 }
 
-##################################### VM INSTANCES #####################################
+# ==== INSTANCE TEMPLATE ==================================================
 
 # Instance Template 
 resource "google_compute_instance_template" "mig-template" {
-  name                 = "${var.project_id}-template"
+  name                 = "kubernetes-444901-template"
   instance_description = "An instance template for the stateful MIG."
   machine_type         = "e2-medium"
-  tags                 = ["allow-health-check"]
+  tags                 = ["allow-health-check","allow-all"]
 
   network_interface {
-    network    = "${var.project_id}-vpc"
-    subnetwork = "${var.project_id}-private-subnet"
+    network    = "kubernetes-444901-vpc"
+    subnetwork = "kubernetes-444901-private-subnet"
     access_config {
 
     }
@@ -109,9 +128,11 @@ resource "google_compute_instance_template" "mig-template" {
 
 }
 
+# ==== HEALTH CHECKS ======================================================
+
 # Instance Group Health Check
 resource "google_compute_health_check" "mig-health-check" {
-  name                = "${var.project_id}-mig-health-check"
+  name                = "kubernetes-444901-mig-health-check"
   description         = "Health check via http"
 
   timeout_sec         = 1
@@ -130,10 +151,15 @@ resource "google_compute_health_check" "mig-health-check" {
 
 }
 
-# Stateful Managed Instance Group 
-resource "google_compute_instance_group_manager" "stateful-mig" {
-  name     = "${var.project_id}-stateful-mig"
-  zone     = var.project_zones.zone_a
+# ==== MANAGED INSTANCE GROUP =============================================
+
+# Stateful Managed Regional Instance Group 
+resource "google_compute_region_instance_group_manager" "stateful-mig" {
+
+  name     = "kubernetes-444901-stateful-mig"
+  region     = "us-central1"
+  base_instance_name = "kubernetes-444901-managed-vm"
+  target_size        = 5
 
   named_port {
     name = "http"
@@ -150,20 +176,17 @@ resource "google_compute_instance_group_manager" "stateful-mig" {
     initial_delay_sec = 300
   }
 
-  base_instance_name = "${var.project_id}-managed-vm"
-  target_size        = 2
-
-    depends_on = [
+  depends_on = [
     google_compute_network.vpc-network
   ]
 
 }
 
-################################ EXTERNAL LOAD BALANCER ################################
+# ==== EXTERNAL LOAD BALANCER =============================================
 
 # Load Balancer Reserved Public IP Address 
 resource "google_compute_global_address" "lb-reserved-public-address" {
-  name         = "${var.project_id}-lb-static-ip"
+  name         = "kubernetes-444901-lb-static-ip"
   description  = "The reserved static IP address for the load balancer."
   address_type = "EXTERNAL"
 
@@ -175,7 +198,7 @@ resource "google_compute_global_address" "lb-reserved-public-address" {
 
 # Load Balancer Forwarding Rule
 resource "google_compute_global_forwarding_rule" "http-proxy-forwarding-rule" {
-  name                  = "${var.project_id}-lb-forwarding-rule"
+  name                  = "kubernetes-444901-lb-forwarding-rule"
   ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   port_range            = "80"
@@ -190,7 +213,7 @@ resource "google_compute_global_forwarding_rule" "http-proxy-forwarding-rule" {
 
 # Load Balancer HTTP Proxy
 resource "google_compute_target_http_proxy" "lb-http-proxy" {
-  name        = "${var.project_id}-lb-target-http-proxy"
+  name        = "kubernetes-444901-lb-target-http-proxy"
   description = "The HTTP Proxy that'll redirect traffic to the load balancer."
   url_map     = google_compute_url_map.lb-url-map.id
 
@@ -202,7 +225,7 @@ resource "google_compute_target_http_proxy" "lb-http-proxy" {
 
 # Host and Path Rules (URL Map)
 resource "google_compute_url_map" "lb-url-map" {
-  name            = "${var.project_id}-load-balancer"
+  name            = "kubernetes-444901-load-balancer"
   description     = "Route request sent to the HTTP Proxy to the backend service."
   default_service = google_compute_backend_service.lb-backend-service.id
 
@@ -214,7 +237,7 @@ resource "google_compute_url_map" "lb-url-map" {
 
 # Load Balancer Backend Service
 resource "google_compute_backend_service" "lb-backend-service" {
-  name                    = "${var.project_id}-lb-backend-service"
+  name                    = "kubernetes-444901-lb-backend-service"
   protocol                = "HTTP"
   port_name               = "http"
   load_balancing_scheme   = "EXTERNAL_MANAGED"
@@ -223,7 +246,7 @@ resource "google_compute_backend_service" "lb-backend-service" {
   health_checks           = [google_compute_health_check.lb-health-check.id]
 
   backend {
-    group           = google_compute_instance_group_manager.stateful-mig.instance_group
+    group           = google_compute_region_instance_group_manager.stateful-mig.instance_group
     balancing_mode  = "UTILIZATION"
     capacity_scaler = 1.0
   }
@@ -236,7 +259,7 @@ resource "google_compute_backend_service" "lb-backend-service" {
 
 # Load Balancer Health Check
 resource "google_compute_health_check" "lb-health-check" {
-  name     = "${var.project_id}-lb-health-check"
+  name     = "kubernetes-444901-lb-health-check"
   http_health_check {
     port_specification = "USE_SERVING_PORT"
   }
