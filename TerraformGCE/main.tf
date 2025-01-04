@@ -91,6 +91,13 @@ resource "google_compute_subnetwork" "vpc-private-subnet" {
   ip_cidr_range = "10.10.0.0/24"
   region        = var.project_region
   network       = google_compute_network.vpc-network.id
+  private_ip_google_access = true
+
+  log_config {
+    aggregation_interval = "INTERVAL_5_SEC"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 }
 
 # Proxy Subnet
@@ -101,6 +108,13 @@ resource "google_compute_subnetwork" "vpc-proxy-subnet" {
   purpose       = "REGIONAL_MANAGED_PROXY"
   role          = "ACTIVE"
   network       = google_compute_network.vpc-network.id
+  private_ip_google_access = true
+
+  log_config {
+    aggregation_interval = "INTERVAL_5_SEC"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 }
 
 # ==== INSTANCE TEMPLATE ==================================================
