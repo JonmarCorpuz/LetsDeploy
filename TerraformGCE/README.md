@@ -1,16 +1,3 @@
-```Text
- _________  ________ ________  ________  _____ ______   ___       __   ________     
-|\___   ___\\  _____\\   __  \|\   __  \|\   _ \  _   \|\  \     |\  \|\   __  \    
-\|___ \  \_\ \  \__/\ \  \|\  \ \  \|\  \ \  \\\__\ \  \ \  \    \ \  \ \  \|\ /_   
-     \ \  \ \ \   __\\ \  \\\  \ \   _  _\ \  \\|__| \  \ \  \  __\ \  \ \   __  \  
-      \ \  \ \ \  \_| \ \  \\\  \ \  \\  \\ \  \    \ \  \ \  \|\__\_\  \ \  \|\  \ 
-       \ \__\ \ \__\   \ \_______\ \__\\ _\\ \__\    \ \__\ \____________\ \_______\
-        \|__|  \|__|    \|_______|\|__|\|__|\|__|     \|__|\|____________|\|_______|
-```
-
-TerraformWB is the equivalent of Jonmar's gCloudWB but uses Terraform to create and manage the underlying infrastructure rather than Google Cloud's Cloud SDK.
-
-
 # References
 
 * https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance_template
