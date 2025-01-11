@@ -31,8 +31,6 @@ then
     echo -e "${RED}[ERROR 3]${WHITE} Usage: ./deploy.sh -a {apply|destroy}" && echo "" &&  exit 1
 fi
 
-echo "${2,,}"
-
 if [[ ${2,,} == "apply" ]] || [[ ${2,,} == "destroy" ]];
 then 
     echo ""
@@ -75,8 +73,6 @@ do
 
     read -p "$(echo -e ${YELLOW}[REQUIRED]${WHITE} Please enter the machine type you want the instances in your instance group to have:) " MachineType
 
-    echo "if ! gcloud compute machine-types describe $MachineType --project $ProjectID --zone "${ProjectRegion}-a" &> /dev/null;"
-
     if ! gcloud compute machine-types describe $MachineType --project $ProjectID --zone "${InstanceGroupRegion}-a" &> /dev/null;
     then
         echo "" && echo -e "${RED}[ERROR 1]${WHITE} ${MachineType} couldn't be found. Please provide a valid machine type." && echo ""
@@ -118,18 +114,12 @@ done
 
 #
 sed -i 's/PROJECT_ID/'"$ProjectID"'/g' ./tests/setup/main.tf
-sed -i 's/PROJECT_ID/'"$ProjectID"'/g' ./variables.tf
 sed -i 's/PROJECT_ID/'"$ProjectID"'/g' ./main.tf
 
-
 sed -i 's/PROJECT_REGION/'"$InstanceGroupRegion"'/g' ./main.tf
-
 sed -i 's/MACHINE_TYPE/'"$MachineType"'/g' ./main.tf
-
 sed -i 's/MINIMUM_INSTANCES/'"$MinimumInstances"'/g' ./main.tf
-
 sed -i 's/MAXIMUM_INSTANCES/'"$MaximumInstances"'/g' ./main.tf
-
 
 # ==== TERRAFORM ========================================================================================================================
 
@@ -154,10 +144,6 @@ then
         terraform destroy --auto-approve
         rm -r .terraform/*
     fi
-
-    #
-    sed -i 's/'"$ProjectID"'/PROJECT_ID/g' ./tests/setup/main.tf
-    sed -i 's/'"$ProjectID"'/PROJECT_ID/g' ./variables.tf
 
     #
     echo "" && echo -e "${GREEN}[SUCCESS]${WHITE} Yay it worked!" && exit 0
