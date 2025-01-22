@@ -120,8 +120,8 @@ resource "google_compute_instance_template" "mig-template" {
   tags                 = ["allow-health-check","allow-all"]
 
   network_interface {
-    network    = "${var.project_id}-vpc"
-    subnetwork = "${var.project_id}-private-subnet"
+    network    = "PROJECT_ID-vpc"
+    subnetwork = "PROJECT_ID-private-subnet"
     access_config {
 
     }
